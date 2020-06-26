@@ -1,0 +1,26 @@
+name: 게시글 업데이트
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+
+jobs:
+  ilbe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: yarn
+      - name: 일베 게시판 업데이트
+        run: yarn start ilbe
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+  animation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: yarn
+      - name: 애니 인기글 게시판 업데이트
+        run: yarn start animation
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
