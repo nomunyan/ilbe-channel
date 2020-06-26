@@ -12,7 +12,7 @@ interface Channel {
   board: Board;
   // 서브 게시판
   sub?: string;
-
+  // 설명
   baseDescription: string;
 }
 
@@ -22,8 +22,14 @@ interface Article {
   id: string;
   // 링크
   url: string;
+  // 이미지
+  image?: string;
+  // 분류
+  category?: string;
   // 제목
   title: string;
+  // 내용
+  content: string;
   // 일베수
   comments: string;
   // 작성자
@@ -51,33 +57,39 @@ const channels: Channel[] = [
       "애게 인기글 알림 채널\nsource: https://github.com/nomunyan/ilbe-channel",
   },
 ];
+
 const descriptionFormat = (channel: Channel, latestArticleId: string): string =>
   `${channel.baseDescription}\n최근 업데이트: ${latestArticleId}`;
+
 const parseDescription = (description: string): string | null => {
   const result = /최근 업데이트: (.*)/gi.exec(description);
   if (result && result.length == 2) return result[1];
   else return null;
 };
-const messageFormat = (article: Article) =>
-  `${article.title}\n\n일베: ${article.like}\n조회수: ${article.viewCount} 덧글: ${article.comments}\n링크: ${article.url}`;
+
+const messageFormat = (article: Article) => `
+<b>${article.category ? article.category + "|" : ""}
+${article.title}</b>
+${article.content}
+
+일베: ${article.like}
+조회수: ${article.viewCount} 덧글: ${article.comments}
+링크: ${article.url}
+`;
+
 const reArticle = new RegExp(
-  `<a href="/view/(?<id>\\d*).*?<div class="item-box__list " >(?<title>.*?)<span class="ico-list-wrap">(?:<i class="comment">\\[(?<comments>.*?)\\])?.*?<p class="global-nick" >.*?"><\\/i>(?<author>.*?)<.*?<span class="list-item__date">(?<datetime>.*?)<.*?<span class="global-nick">조회</span> (?<viewCount>.*?)<.*?<span class="global-nick">추천</span> (?<like>.*?)<`,
+  `<span class="title" >.*?(?:<img class="lazy_thumbnail" data="(?<image>.*?)".*?)?(?:<em class="line-cate".*?>(?<category>.*?)<.*?)?<a href="\\/view\\/(?<id>.*?)\\?.*?class="subject">(?<title>.*?)<.*?iconReply.gif" \\/><a>(?<comments>.*?)<.*?class="content">(?<content>.*?)<.*?nick">.*?">(?<author>.*?)<.*?date">(?<datetime>.*?)<.*?view">(?<viewCount>.*?)<.*?recomm">(?<like>.*?)<`,
   "gmis"
 );
+
 const getArticles = async (channel: Channel): Promise<Article[]> => {
   const { data } = await axios.get<string>(
-    `https://m.ilbe.com/list/${channel.board}`,
+    `https://www.ilbe.com/list/${channel.board}?listStyle=webzine`,
     {
       params: { sub: channel.sub },
     }
   );
-  const matches = [
-    ...data
-      .slice(
-        data.indexOf(`<script>BBSListAd.show("M","${channel.board}");</script>`)
-      )
-      .matchAll(reArticle),
-  ];
+  const matches = [...data.matchAll(reArticle)];
   return matches.map<Article>(({ groups: el }) => ({
     id: el?.id || "",
     url: `https://www.ilbe.com/view/${el?.id || ""}`,
@@ -87,6 +99,9 @@ const getArticles = async (channel: Channel): Promise<Article[]> => {
     datetime: el?.datetime || "",
     viewCount: el?.viewCount || "",
     like: el?.like || "",
+    image: el?.image,
+    content: el?.content || "",
+    category: el?.category,
   }));
 };
 
@@ -112,7 +127,27 @@ void (async (board: string): Promise<void> => {
 
   for (let i = lastIndex === -1 ? 5 : lastIndex - 1; i > -1; --i) {
     try {
-      await bot.telegram.sendMessage(channel.chat, messageFormat(articles[i]));
+      const image = articles[i].image;
+      if (image) {
+        const { data } = await axios.get<NodeJS.ReadableStream>(image, {
+          responseType: "stream",
+        });
+        await bot.telegram.sendPhoto(
+          channel.chat,
+          { source: data },
+          {
+            caption: messageFormat(articles[i]),
+            parse_mode: "HTML",
+          }
+        );
+      } else
+        await bot.telegram.sendMessage(
+          channel.chat,
+          messageFormat(articles[i]),
+          {
+            parse_mode: "HTML",
+          }
+        );
       newLastArticleId = articles[i].id || null;
     } catch (e) {
       console.log((<Error>e).message);
