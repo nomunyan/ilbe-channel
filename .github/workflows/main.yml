@@ -2,7 +2,7 @@ name: 게시글 업데이트
 
 on:
   schedule:
-    - cron: "5 * * * *"
+    - cron: "*/5 * * * *"
 
 jobs:
   ilbe:
