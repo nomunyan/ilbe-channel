@@ -7,14 +7,13 @@
   "author": "Nomu Nyan",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node index.ts",
+    "start": "tsc -p tsconfig.json && node index.js",
     "lint": "eslint --ext .ts ."
   },
   "dependencies": {
     "@types/node": "^14.0.14",
     "axios": "^0.19.2",
     "telegraf": "https://github.com/nomunyan/telegraf.git",
-    "ts-node": "^8.10.2",
     "typescript": "^3.9.5"
   },
   "devDependencies": {
