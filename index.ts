@@ -59,7 +59,7 @@ const parseDescription = (description: string): string | null => {
   else return null;
 };
 const messageFormat = (article: Article) =>
-  `제목: ${article.title}\n일베: ${article.like}\n조회수: ${article.viewCount} 덧글: ${article.comments}\n링크: ${article.url}`;
+  `${article.title}\n\n일베: ${article.like}\n조회수: ${article.viewCount} 덧글: ${article.comments}\n링크: ${article.url}`;
 const reArticle = new RegExp(
   `<a href="/view/(?<id>\\d*).*?<div class="item-box__list " >(?<title>.*?)<span class="ico-list-wrap">(?:<i class="comment">\\[(?<comments>.*?)\\])?.*?<p class="global-nick" >.*?"><\\/i>(?<author>.*?)<.*?<span class="list-item__date">(?<datetime>.*?)<.*?<span class="global-nick">조회</span> (?<viewCount>.*?)<.*?<span class="global-nick">추천</span> (?<like>.*?)<`,
   "gmis"
