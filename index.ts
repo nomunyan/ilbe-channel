@@ -1,6 +1,7 @@
 import { Telegraf } from "telegraf";
 import { exit } from "process";
 import axios from "axios";
+import { AllHtmlEntities as Entities } from "html-entities";
 
 // 게시판 타입
 type Board = "ilbe" | "animation";
@@ -42,6 +43,8 @@ interface Article {
   like: string;
 }
 
+const entities = new Entities();
+
 const channels: Channel[] = [
   {
     chat: "@ilbest",
@@ -72,9 +75,9 @@ const messageFormat = (article: Article) => `
 ${article.title}</b>
 ${article.content}
 
-일베: ${article.like}
-조회수: ${article.viewCount} 덧글: ${article.comments}
-링크: ${article.url}
+✍ ${article.author}
+👌 ${article.like}     👀 ${article.viewCount}     💬 ${article.comments}
+🔗 ${article.url}
 `;
 
 const reArticle = new RegExp(
@@ -92,7 +95,7 @@ const getArticles = async (channel: Channel): Promise<Article[]> => {
   const matches = [...data.matchAll(reArticle)];
   return matches.map<Article>(({ groups: el }) => ({
     id: el?.id || "",
-    url: `https://www.ilbe.com/view/${el?.id || ""}`,
+    url: `https://ilbe.com/view/${el?.id || ""}`,
     title: el?.title || "",
     comments: el?.comments || "",
     author: el?.author || "",
@@ -100,7 +103,7 @@ const getArticles = async (channel: Channel): Promise<Article[]> => {
     viewCount: el?.viewCount || "",
     like: el?.like || "",
     image: el?.image,
-    content: el?.content || "",
+    content: entities.decode(el?.content || ""),
     category: el?.category,
   }));
 };
