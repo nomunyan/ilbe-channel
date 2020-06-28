@@ -21,6 +21,8 @@ interface Channel {
 interface Article {
   // ID
   id: string;
+  // count
+  count: string;
   // 링크
   url: string;
   // 이미지
@@ -61,18 +63,19 @@ const channels: Channel[] = [
   },
 ];
 
-const descriptionFormat = (channel: Channel, latestArticleId: string): string =>
-  `${channel.baseDescription}\n최근 업데이트: ${latestArticleId}`;
+const descriptionFormat = (channel: Channel, latestArticle: Article): string =>
+  `${channel.baseDescription}\n최근 업데이트: ${latestArticle.id}|${latestArticle.count}`;
 
-const parseDescription = (description: string): string | null => {
-  const result = /최근 업데이트: (.*)/gi.exec(description);
-  if (result && result.length == 2) return result[1];
-  else return null;
+const parseDescription = (
+  description: string
+): [string, string] | [null, null] => {
+  const result = /최근 업데이트: (.*)\|(.*)/gi.exec(description);
+  if (result && result.length == 3) return [result[1], result[2]];
+  else return [null, null];
 };
 
 const messageFormat = (article: Article) => `
-<b>${article.category ? article.category + "|" : ""}
-${article.title}</b>
+<b>${article.category ? article.category + " | " : ""}${article.title}</b>
 ${article.content}
 
 ✍ ${article.author}
@@ -81,7 +84,7 @@ ${article.content}
 `;
 
 const reArticle = new RegExp(
-  `<span class="title" >.*?(?:<img class="lazy_thumbnail" data="(?<image>.*?)".*?)?(?:<em class="line-cate".*?>(?<category>.*?)<.*?)?<a href="\\/view\\/(?<id>.*?)\\?.*?class="subject">(?<title>.*?)<.*?iconReply.gif" \\/><a>(?<comments>.*?)<.*?class="content">(?<content>.*?)<.*?nick">.*?">(?<author>.*?)<.*?date">(?<datetime>.*?)<.*?view">(?<viewCount>.*?)<.*?recomm">(?<like>.*?)<`,
+  `<li>[\\t\\n\\r ]*<span class="count">(?<count>.*?)<.*?<span class="title" >.*?(?:<img class="lazy_thumbnail" data="(?<image>.*?)".*?)?(?:<em class="line-cate".*?>(?<category>.*?)<.*?)?<a href="\\/view\\/(?<id>.*?)\\?.*?class="subject">(?<title>.*?)<.*?iconReply.gif" \\/><a>(?<comments>.*?)<.*?class="content">(?<content>.*?)<.*?nick">.*?">(?<author>.*?)<.*?date">(?<datetime>.*?)<.*?view">(?<viewCount>.*?)<.*?recomm">(?<like>.*?)<`,
   "gmis"
 );
 
@@ -95,6 +98,7 @@ const getArticles = async (channel: Channel): Promise<Article[]> => {
   const matches = [...data.matchAll(reArticle)];
   return matches.map<Article>(({ groups: el }) => ({
     id: el?.id || "",
+    count: el?.count || "",
     url: `https://ilbe.com/view/${el?.id || ""}`,
     title: el?.title || "",
     comments: el?.comments || "",
@@ -121,14 +125,16 @@ void (async (board: string): Promise<void> => {
   const { description: oldDescription } = await bot.telegram.getChat(
     channel.chat
   );
-  const lastArticleId = oldDescription
+  const [lastArticleId, count] = oldDescription
     ? parseDescription(oldDescription)
-    : null;
+    : [null, null];
   const articles = await getArticles(channel);
-  const lastIndex = articles.findIndex((el) => el.id === lastArticleId);
-  let newLastArticleId: string | null = null;
+  const lastIdIndex = articles.findIndex((el) => el.id === lastArticleId);
+  const lastCountIndex = articles.findIndex((el) => el.count === count);
+  const lastIndex = lastIdIndex !== -1 ? lastIdIndex - 1 : lastCountIndex;
+  let newLastArticle: Article | null = null;
 
-  for (let i = lastIndex === -1 ? 5 : lastIndex - 1; i > -1; --i) {
+  for (let i = lastIndex; i > -1; --i) {
     try {
       const image = articles[i].image;
       if (image) {
@@ -151,14 +157,14 @@ void (async (board: string): Promise<void> => {
             parse_mode: "HTML",
           }
         );
-      newLastArticleId = articles[i].id || null;
+      newLastArticle = articles[i];
     } catch (e) {
       console.log((<Error>e).message);
     }
   }
 
-  const newDescription = newLastArticleId
-    ? descriptionFormat(channel, newLastArticleId)
+  const newDescription = newLastArticle
+    ? descriptionFormat(channel, newLastArticle)
     : null;
 
   if (newDescription && oldDescription != newDescription) {
