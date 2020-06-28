@@ -74,6 +74,19 @@ const parseDescription = (
   else return [null, null];
 };
 
+const getLastIndex = (articles: Article[], description?: string): number => {
+  const [lastArticleId, count] = description
+    ? parseDescription(description)
+    : [null, null];
+  const lastIdIndex = articles.findIndex((el) => el.id === lastArticleId);
+  const lastCountIndex = articles.findIndex((el) => el.count === count);
+  return lastIdIndex !== -1
+    ? lastIdIndex - 1
+    : lastCountIndex !== -1
+    ? lastCountIndex
+    : 5;
+};
+
 const messageFormat = (article: Article) => `
 <b>${article.category ? article.category + " | " : ""}${article.title}</b>
 ${article.content}
@@ -125,16 +138,10 @@ void (async (board: string): Promise<void> => {
   const { description: oldDescription } = await bot.telegram.getChat(
     channel.chat
   );
-  const [lastArticleId, count] = oldDescription
-    ? parseDescription(oldDescription)
-    : [null, null];
   const articles = await getArticles(channel);
-  const lastIdIndex = articles.findIndex((el) => el.id === lastArticleId);
-  const lastCountIndex = articles.findIndex((el) => el.count === count);
-  const lastIndex = lastIdIndex !== -1 ? lastIdIndex - 1 : lastCountIndex;
   let newLastArticle: Article | null = null;
 
-  for (let i = lastIndex; i > -1; --i) {
+  for (let i = getLastIndex(articles, oldDescription); i > -1; --i) {
     try {
       const image = articles[i].image;
       if (image) {
