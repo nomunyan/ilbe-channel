@@ -33,7 +33,7 @@ interface Article {
   title: string;
   // 내용
   content: string;
-  // 일베수
+  // 덧글수
   comments: string;
   // 작성자
   author: string;
