@@ -93,7 +93,6 @@ ${article.content}
 
 ✍ ${article.author}
 👌 ${article.like}     👀 ${article.viewCount}     💬 ${article.comments}
-🔗 ${article.url}
 `;
 
 const reArticle = new RegExp(
@@ -154,6 +153,9 @@ void (async (board: string): Promise<void> => {
           {
             caption: messageFormat(articles[i]),
             parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{ text: "바로가기", url: articles[i].url }]],
+            },
           }
         );
       } else
@@ -162,6 +164,9 @@ void (async (board: string): Promise<void> => {
           messageFormat(articles[i]),
           {
             parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{ text: "바로가기", url: articles[i].url }]],
+            },
           }
         );
       newLastArticle = articles[i];
